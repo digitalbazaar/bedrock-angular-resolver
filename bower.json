@@ -1,0 +1,17 @@
+{
+  "name": "bedrock-angular-resolver",
+  "version": "0.0.1-dev",
+  "main": "./resolver.js",
+  "moduleType": ["amd"],
+  "ignore": [
+    "bedrock/bower.json",
+    "bedrock/bower_components",
+    "bedrock/components",
+    "bedrock/node_modules",
+    "bedrock/package.json",
+    "bedrock/test.js"
+  ],
+  "dependencies": {
+    "bedrock-angular": "^1.4.0"
+  }
+}
