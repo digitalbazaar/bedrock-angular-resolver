@@ -2,9 +2,10 @@
   "name": "bedrock-angular-resolver-test",
   "version": "0.0.0",
   "dependencies": {
-    "bedrock-angular": "^1.0.0",
+    "bedrock-angular": "^1.5.0",
     "chai": "^3.0.0",
-    "mocha": "^2.2.5"
+    "mocha": "^2.2.5",
+    "chai-as-promised": "~5.1.0"
   },
   "resolutions": {
     "angular": "1.3.20"

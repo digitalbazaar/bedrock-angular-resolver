@@ -8,7 +8,6 @@ var path = require('path');
 require('bedrock-protractor');
 require('bedrock-requirejs');
 require('bedrock-views');
-require('./config');
 
 var config = bedrock.config;
 var dir = path.join(__dirname, '..');
@@ -16,8 +15,7 @@ var dir = path.join(__dirname, '..');
 // add bedrock-angular-resolver bower package
 config.requirejs.bower.packages.push({
   path: dir,
-  manifest: JSON.parse(fs.readFileSync(
-    path.join(dir, 'bower.json'), {encoding: 'utf8'}))
+  manifest: path.join(dir, 'bower.json')
 });
 
 bedrock.start();
