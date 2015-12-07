@@ -1,6 +1,6 @@
 {
   "name": "bedrock-angular-resolver",
-  "version": "0.0.1-dev",
+  "version": "1.0.0",
   "main": "./resolver.js",
   "moduleType": ["amd"],
   "ignore": [
