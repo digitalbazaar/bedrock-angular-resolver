@@ -11,7 +11,12 @@ var module = angular.module('bedrock.resolver', []);
 
 module.provider('routeResolver', function() {
   var self = this;
+
+  // generated resolve functions that angular router processes
   self.resolve = {};
+
+  // return a routeResolver instance (this provider is generally only used
+  // as a provider, its instance isn't directly used)
   this.$get = function() {
     return self.resolve;
   };
@@ -48,19 +53,32 @@ module.provider('routeResolver', function() {
       throw new TypeError('resolve must be a function or string.');
     }
 
-    // TODO: add circular dependency check
-
     /* @ngInject */
     self.resolve[name] = function($injector, $route, $q) {
-      return $q(function(resolve, reject) {
+      // TODO: add circular dependency check
+      // start resolving
+      var $$resolving = ($route.current.$$resolving ||
+        ($route.current.$$resolving = {}));
+      var locals = $route.current.locals || ($route.current.locals = {});
+      if(name in $$resolving) {
+        return $$resolving[name];
+      }
+      return $$resolving[name] = $q(function(resolve, reject) {
         // ensure all prerequisite resolves complete
         var deps = args.map(function(key) {
-          return $route.current.locals[key];
+          if(!(key in $$resolving)) {
+            var fn = self.resolve[key];
+            $$resolving[key] = angular.isString(fn) ?
+              $injector.get(fn) : $injector.invoke(fn, null, null, key);
+          }
+          return $$resolving[key];
         });
         $q.all(deps).then(function() {
-          resolve(angular.isString(fn) ?
+          $q.when(angular.isString(fn) ?
             $injector.get(fn) :
-            $injector.invoke(fn, null, null, name));
+            $injector.invoke(fn, null, null, name)).then(function(result) {
+            resolve(locals[name] = result);
+          });
         }, reject);
       });
     };
@@ -73,8 +91,8 @@ module.config(function($routeProvider, routeResolverProvider) {
   var when = $routeProvider.when;
   $routeProvider.when = function(path, route) {
     route.resolve = route.resolve || (route.resolve = {});
-    route.resolve =
-      angular.extend({}, route.resolve, routeResolverProvider.resolve);
+    route.resolve = angular.extend(
+      {}, route.resolve, routeResolverProvider.resolve);
     return when.apply($routeProvider, arguments);
   };
 });
