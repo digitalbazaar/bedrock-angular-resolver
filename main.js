@@ -1,7 +1,7 @@
 /*!
  * Resolver module.
  *
- * Copyright (c) 2015 Digital Bazaar, Inc. All rights reserved.
+ * Copyright (c) 2015-2016 Digital Bazaar, Inc. All rights reserved.
  */
 define(['angular'], function(angular) {
 
@@ -14,6 +14,9 @@ module.provider('routeResolver', function() {
 
   // generated resolve functions that angular router processes
   self.resolve = {};
+
+  // global resolvers
+  self._global = {};
 
   // return a routeResolver instance (this provider is generally only used
   // as a provider, its instance isn't directly used)
@@ -53,36 +56,118 @@ module.provider('routeResolver', function() {
       throw new TypeError('resolve must be a function or string.');
     }
 
+    self._global[name] = {
+      deps: args,
+      fn: fn,
+      global: true
+    };
+
+    return self;
+  };
+
+  /**
+   * Called internally to add the global `brResolve` resolve function to
+   * route options.
+   *
+   * @param routeOptions the route options.
+   */
+  this._addGlobals = function(routeOptions) {
+    // temporary state
+    var resolvers = {
+      local: routeOptions.resolve || {},
+      global: {}
+    };
+    var resolving = {
+      local: {},
+      global: {}
+    };
+
+    // rewrite resolve option
+    routeOptions.resolve = {
+      /* @ngInject */
+      brResolve: function($injector, $q, $route) {
+        // start resolving `brResolve`
+        var locals = $route.current.locals || ($route.current.locals = {});
+        var brResolve = locals.brResolve || (locals.brResolve = {});
+        // `brResolve` is a local resolver and all other locals depend on it
+        // to ensure backwards compatibility w/writing to $route.current.locals
+        if('brResolve' in resolving.local) {
+          return resolving.local.brResolve;
+        }
+        return resolving.local.brResolve = $q(function(resolve, reject) {
+          // resolve all global resolvers
+          resolveSet($injector, $q, resolvers.global, resolving.global)
+            .then(function() {
+              resolve(brResolve);
+            }, reject);
+        });
+      }
+    };
+
+    // create each global resolver
+    angular.forEach(self._global, function(options, name) {
+      routeOptions.resolve[name] = resolvers.global[name] =
+        createOrderedResolver(
+          resolvers.global, resolving.global, name, options);
+    });
+
+    // create local resolvers and make them all depend on `brResolve`
+    angular.forEach(resolvers.local, function(fn, name) {
+      routeOptions.resolve[name] = resolvers.local[name] =
+        createOrderedResolver(
+          resolvers.local, resolving.local, name,
+          {deps: ['brResolve'], fn: fn});
+    });
+  };
+
+  function createOrderedResolver(resolvers, resolving, name, options) {
+    var deps = options.deps || [];
+    var fn = options.fn;
+    var useBrResolve = !!options.global;
+
     /* @ngInject */
-    self.resolve[name] = function($injector, $route, $q) {
+    var resolver = function($injector, $route, $q) {
       // TODO: add circular dependency check
       // start resolving
-      var $$resolving = ($route.current.$$resolving ||
-        ($route.current.$$resolving = {}));
       var locals = $route.current.locals || ($route.current.locals = {});
-      if(name in $$resolving) {
-        return $$resolving[name];
+      var brResolve;
+      if(useBrResolve) {
+        brResolve = locals.brResolve || (locals.brResolve = {});
       }
-      return $$resolving[name] = $q(function(resolve, reject) {
+      if(name in resolving) {
+        return resolving[name];
+      }
+      return resolving[name] = $q(function(resolve, reject) {
         // ensure all prerequisite resolves complete
-        var deps = args.map(function(key) {
-          if(!(key in $$resolving)) {
-            var fn = self.resolve[key];
-            $$resolving[key] = angular.isString(fn) ?
-              $injector.get(fn) : $injector.invoke(fn, null, null, key);
-          }
-          return $$resolving[key];
-        });
-        $q.all(deps).then(function() {
+        resolveSet($injector, $q, resolvers, resolving, deps).then(function() {
           $q.when(angular.isString(fn) ?
             $injector.get(fn) :
             $injector.invoke(fn, null, null, name)).then(function(result) {
+            if(brResolve) {
+              brResolve[name] = result;
+            }
             resolve(locals[name] = result);
           });
-        }, reject);
+        }).catch(reject);
       });
     };
-  };
+    return resolver;
+  }
+
+  function resolveSet($injector, $q, resolvers, resolving, subset) {
+    if(!subset) {
+      subset = Object.keys(resolvers);
+    }
+    var deps = subset.map(function(name) {
+      if(!(name in resolving)) {
+        var fn = resolvers[name];
+        resolving[name] = angular.isString(fn) ?
+          $injector.get(fn) : $injector.invoke(fn, null, null, name);
+      }
+      return resolving[name];
+    });
+    return $q.all(deps);
+  }
 });
 
 /* @ngInject */
@@ -90,9 +175,7 @@ module.config(function($routeProvider, routeResolverProvider) {
   // extend $routeProvider to allow adding global custom resolver functions
   var when = $routeProvider.when;
   $routeProvider.when = function(path, route) {
-    route.resolve = route.resolve || (route.resolve = {});
-    route.resolve = angular.extend(
-      {}, route.resolve, routeResolverProvider.resolve);
+    routeResolverProvider._addGlobals(route);
     return when.apply($routeProvider, arguments);
   };
 });
