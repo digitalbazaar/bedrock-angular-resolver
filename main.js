@@ -139,28 +139,36 @@ module.provider('routeResolver', function() {
       }
       return resolving[name] = $q(function(resolve, reject) {
         // ensure all prerequisite resolves complete
-        resolveSet($injector, $q, resolvers, resolving, deps).then(function() {
-          $q.when(angular.isString(fn) ?
-            $injector.get(fn) :
-            $injector.invoke(fn, null, null, name)).then(function(result) {
-            if(brResolve) {
-              brResolve[name] = result;
-            }
-            resolve(locals[name] = result);
-          });
-        }).catch(reject);
+        resolveSet($injector, $q, resolvers, resolving, deps, name)
+          .then(function() {
+            $q.when(angular.isString(fn) ?
+              $injector.get(fn) :
+              $injector.invoke(fn, null, null, name)).then(function(result) {
+              if(brResolve) {
+                brResolve[name] = result;
+              }
+              resolve(locals[name] = result);
+            });
+          }).catch(reject);
       });
     };
     return resolver;
   }
 
-  function resolveSet($injector, $q, resolvers, resolving, subset) {
+  function resolveSet($injector, $q, resolvers, resolving, subset, parent) {
     if(!subset) {
       subset = Object.keys(resolvers);
     }
     var deps = subset.map(function(name) {
       if(!(name in resolving)) {
         var fn = resolvers[name];
+        if(fn === undefined) {
+          if(parent) {
+            throw Error('Resolver "' + parent +
+              '" has undefined dependency: "' + name + '"');
+          }
+          throw Error('Undefined resolve dependency: "' + name + '".');
+        }
         resolving[name] = angular.isString(fn) ?
           $injector.get(fn) : $injector.invoke(fn, null, null, name);
       }
