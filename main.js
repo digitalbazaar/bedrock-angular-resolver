@@ -72,25 +72,22 @@ module.provider('routeResolver', function() {
    * @param routeOptions the route options.
    */
   this._addGlobals = function(routeOptions) {
-    // temporary state
+    // resolvers for this route
     var resolvers = {
       local: routeOptions.resolve || {},
       global: {}
     };
-    var resolving = {
-      local: {},
-      global: {}
-    };
 
-    // rewrite resolve option
+    // rewrite resolve option to control dependency ordering; add `brResolve`
+    // which will ensure global resolvers are first
     routeOptions.resolve = {
       /* @ngInject */
       brResolve: function($injector, $q, $route) {
         // start resolving `brResolve`
         var locals = $route.current.locals || ($route.current.locals = {});
+        var resolving = $route.current._brResolving || (
+          $route.current._brResolving = {local: {}, global: {}});
         var brResolve = locals.brResolve || (locals.brResolve = {});
-        // `brResolve` is a local resolver and all other locals depend on it
-        // to ensure backwards compatibility w/writing to $route.current.locals
         if('brResolve' in resolving.local) {
           return resolving.local.brResolve;
         }
@@ -107,20 +104,28 @@ module.provider('routeResolver', function() {
     // create each global resolver
     angular.forEach(self._global, function(options, name) {
       routeOptions.resolve[name] = resolvers.global[name] =
-        createOrderedResolver(
-          resolvers.global, resolving.global, name, options);
+        createOrderedResolver(resolvers.global, name, options);
     });
 
     // create local resolvers and make them all depend on `brResolve`
     angular.forEach(resolvers.local, function(fn, name) {
       routeOptions.resolve[name] = resolvers.local[name] =
         createOrderedResolver(
-          resolvers.local, resolving.local, name,
-          {deps: ['brResolve'], fn: fn});
+          resolvers.local, name, {deps: ['brResolve'], fn: fn});
     });
+
+    // finally add `brResolve` as a local resolver that all other locals
+    // depend on; this ensures backwards compatibility w/some older global
+    // resolvers that read from $route.current.locals directly instead of from
+    // $route.current.locals.brResolve ... without this a local resolver
+    // with the same name as a global one could cause a conflict, here we
+    // delay those so that the values from the global resolvers are set
+    // first and then they can be later overwritten once all the global
+    // resolvers are done
+    resolvers.local.brResolve = routeOptions.resolve.brOptions;
   };
 
-  function createOrderedResolver(resolvers, resolving, name, options) {
+  function createOrderedResolver(resolvers, name, options) {
     var deps = options.deps || [];
     var fn = options.fn;
     var useBrResolve = !!options.global;
@@ -130,9 +135,14 @@ module.provider('routeResolver', function() {
       // TODO: add circular dependency check
       // start resolving
       var locals = $route.current.locals || ($route.current.locals = {});
+      var resolving = $route.current._brResolving || (
+        $route.current._brResolving = {local: {}, global: {}});
       var brResolve;
       if(useBrResolve) {
         brResolve = locals.brResolve || (locals.brResolve = {});
+        resolving = resolving.global;
+      } else {
+        resolving = resolving.local;
       }
       if(name in resolving) {
         return resolving[name];
