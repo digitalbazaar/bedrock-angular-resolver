@@ -1,4 +1,8 @@
-var bedrock = GLOBAL.bedrock;
+/*
+ * Copyright (c) 2015-2016 Digital Bazaar, Inc. All rights reserved.
+ */
+/* jshint -W030 */
+var bedrock = global.bedrock;
 
 bedrock.unit('bedrock-angular-resolver', function(bootstrap) {
 
