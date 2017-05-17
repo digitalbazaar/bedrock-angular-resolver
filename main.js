@@ -1,13 +1,13 @@
 /*!
  * Resolver module.
  *
- * Copyright (c) 2015-2016 Digital Bazaar, Inc. All rights reserved.
+ * Copyright (c) 2015-2017 Digital Bazaar, Inc. All rights reserved.
  */
 define(['angular'], function(angular) {
 
 'use strict';
 
-var module = angular.module('bedrock.resolver', []);
+var module = angular.module('bedrock.resolver', ['ngRoute']);
 
 module.provider('routeResolver', function() {
   var self = this;
