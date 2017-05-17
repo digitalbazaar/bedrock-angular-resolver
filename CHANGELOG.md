@@ -1,5 +1,10 @@
 # bedrock-angular-resolver ChangeLog
 
+## 2.2.4 - 2017-05-17
+
+### Fixed
+- Add missing `ngRoute` dependency.
+
 ## 2.2.3 - 2016-08-03
 
 ### Fixed
