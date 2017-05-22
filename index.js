@@ -3,9 +3,7 @@
  *
  * Copyright (c) 2015-2017 Digital Bazaar, Inc. All rights reserved.
  */
-define(['angular'], function(angular) {
-
-'use strict';
+import angular from 'angular';
 
 var module = angular.module('bedrock.resolver', ['ngRoute']);
 
@@ -154,11 +152,11 @@ module.provider('routeResolver', function() {
             $q.when(angular.isString(fn) ?
               $injector.get(fn) :
               $injector.invoke(fn, null, null, name)).then(function(result) {
-              if(brResolve) {
-                brResolve[name] = result;
-              }
-              resolve(locals[name] = result);
-            });
+                if(brResolve) {
+                  brResolve[name] = result;
+                }
+                resolve(locals[name] = result);
+              });
           }).catch(reject);
       });
     };
@@ -196,8 +194,4 @@ module.config(function($routeProvider, routeResolverProvider) {
     routeResolverProvider._addGlobals(route);
     return when.apply($routeProvider, arguments);
   };
-});
-
-return module.name;
-
 });

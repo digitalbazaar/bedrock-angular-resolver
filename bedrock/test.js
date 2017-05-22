@@ -1,8 +1,7 @@
 /*
- * Copyright (c) 2015-2016 Digital Bazaar, Inc. All rights reserved.
+ * Copyright (c) 2015-2017 Digital Bazaar, Inc. All rights reserved.
  */
 var bedrock = require('bedrock');
-var fs = require('fs');
 var path = require('path');
 
 require('bedrock-protractor');
