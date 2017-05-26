@@ -1,6 +1,6 @@
 {
   "name": "bedrock-angular-resolver",
-  "version": "2.2.4",
+  "version": "3.0.0",
   "description": "Modular angular route resolution tools",
   "main": "index.js",
   "dependencies": {
