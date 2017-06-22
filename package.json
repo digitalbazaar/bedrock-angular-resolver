@@ -4,7 +4,11 @@
   "description": "Modular angular route resolution tools",
   "main": "index.js",
   "dependencies": {
-    "angular": "~1.6.4"
+    "angular": "~1.6.4",
+    "angular-route": "^1.6.4"
+  },
+  "bedrock": {
+    "browserDependencies": "all"
   },
   "repository": {
     "type": "git",
